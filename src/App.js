@@ -82,111 +82,123 @@ function App() {
         setScenario('');
 
         try {
-            console.log("🔄 Envoi de la requête avec proxy CORS alternatif");
+            console.log("🔄 TEST DIRECT - Backend avec CORS activé");
             console.log("📤 Données envoyées:", { description, category, location });
             
-            // ✅ SOLUTION 1: PROXY CORS ALTERNATIF
-            const proxyUrls = [
-                'https://api.allorigins.win/raw?url=',
-                'https://corsproxy.io/?',
-                'https://thingproxy.freeboard.io/fetch/',
-                'https://cors.bridged.cc/'
-            ];
-            
-            let lastError = null;
-            
-            // Essayer chaque proxy jusqu'à ce qu'un fonctionne
-            for (const proxyUrl of proxyUrls) {
-                try {
-                    console.log(`🔧 Essai avec proxy: ${proxyUrl}`);
-                    
-                    const response = await fetch(proxyUrl + encodeURIComponent(API_URL), {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        },
-                        body: JSON.stringify({
-                            description: description,
-                            category: category,
-                            location: location,
-                        }),
-                    });
+            // ✅ SOLUTION FINALE: REQUÊTE DIRECTE
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                // ❌ NE PAS utiliser mode: 'cors' - laisse le navigateur gérer
+                body: JSON.stringify({
+                    description: description,
+                    category: category,
+                    location: location,
+                }),
+            });
 
-                    console.log("📡 Statut de la réponse:", response.status);
-                    
-                    if (response.ok) {
-                        const rawData = await response.json();
-                        console.log("✅ Proxy réussi:", proxyUrl);
-                        
-                        // 🔍 DEBUG DÉTAILLÉ
-                        console.log("=== DONNÉES BRUTES API ===", rawData);
-                        if (rawData.results && rawData.results.length > 0) {
-                            console.log("=== ANALYSE DU PREMIER ARTISAN ===");
-                            const firstArtisan = rawData.results[0];
-                            console.log("Nom:", firstArtisan.name);
-                            console.log("Rating Yelp:", firstArtisan.yelp_rating);
-                            console.log("Nombre d'avis:", firstArtisan.review_count);
-                            console.log("Score CAS:", firstArtisan.cas_score);
-                            console.log("Preuves:", firstArtisan.proofs);
-                            console.log("Scénario:", firstArtisan.scenario_term);
-                            
-                            // Vérification de tous les artisans
-                            console.log("=== TOUS LES ARTISANS ===");
-                            rawData.results.forEach((artisan, idx) => {
-                                console.log(`Artisan ${idx}: ${artisan.name} | Rating: ${artisan.yelp_rating} | Avis: ${artisan.review_count} | CAS: ${artisan.cas_score}%`);
-                            });
-                        }
-
-                        // VALIDATION DES DONNÉES
-                        if (rawData.status === 'success' && rawData.results) {
-                            console.log("✅ Données valides reçues, nombre de résultats:", rawData.results.length);
-                            setResults(rawData.results);
-                            
-                            if (rawData.results.length > 0) {
-                                setScenario(rawData.results[0].scenario_term || 'Urgence');
-                                
-                                // Vérification finale des données affichées
-                                console.log("=== DONNÉES QUI SERONT AFFICHÉES ===");
-                                rawData.results.forEach((artisan, idx) => {
-                                    const displayRating = artisan.yelp_rating || 'Non disponible';
-                                    const displayReviews = artisan.review_count || 0;
-                                    const displayScore = artisan.cas_score || 0;
-                                    console.log(`Affichage ${idx}: ${artisan.name} | Rating: ${displayRating} | Avis: ${displayReviews} | CAS: ${displayScore}%`);
-                                });
-                            }
-                            return; // ✅ Succès - sortir de la boucle
-                        } else {
-                            throw new Error("Structure de réponse invalide: " + JSON.stringify(rawData));
-                        }
-                    } else {
-                        lastError = new Error(`Erreur HTTP: ${response.status}`);
-                        console.warn(`❌ Proxy échoué: ${proxyUrl} - Status: ${response.status}`);
-                    }
-                } catch (err) {
-                    lastError = err;
-                    console.warn(`❌ Proxy échoué: ${proxyUrl} - Erreur: ${err.message}`);
-                    // Continuer avec le proxy suivant
-                }
+            console.log("📡 Statut de la réponse:", response.status);
+            console.log("🔍 Headers CORS:", {
+                'Access-Control-Allow-Origin': response.headers.get('Access-Control-Allow-Origin'),
+                'Access-Control-Allow-Methods': response.headers.get('Access-Control-Allow-Methods'),
+                'Access-Control-Allow-Headers': response.headers.get('Access-Control-Allow-Headers')
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("📝 Réponse d'erreur détaillée:", errorText);
+                throw new Error(`Erreur HTTP ${response.status}: ${errorText}`);
             }
+
+            const rawData = await response.json();
             
-            // Si aucun proxy n'a fonctionné
-            throw lastError || new Error("Tous les proxies CORS ont échoué");
+            // 🔍 DEBUG DÉTAILLÉ
+            console.log("=== DONNÉES BRUTES API ===", rawData);
+            
+            if (rawData.results && rawData.results.length > 0) {
+                console.log("=== ANALYSE DU PREMIER ARTISAN ===");
+                const firstArtisan = rawData.results[0];
+                console.log("Nom:", firstArtisan.name);
+                console.log("Rating Yelp:", firstArtisan.yelp_rating);
+                console.log("Nombre d'avis:", firstArtisan.review_count);
+                console.log("Score CAS:", firstArtisan.cas_score);
+                console.log("Preuves:", firstArtisan.proofs);
+                console.log("Scénario:", firstArtisan.scenario_term);
+                
+                // Vérification de tous les artisans
+                console.log("=== TOUS LES ARTISANS ===");
+                rawData.results.forEach((artisan, idx) => {
+                    console.log(`Artisan ${idx}: ${artisan.name} | Rating: ${artisan.yelp_rating} | Avis: ${artisan.review_count} | CAS: ${artisan.cas_score}%`);
+                });
+            } else {
+                console.warn("⚠️ Aucun résultat trouvé dans la réponse");
+            }
+
+            // VALIDATION DES DONNÉES
+            if (rawData.status === 'success' && rawData.results) {
+                console.log("✅ Données valides reçues, nombre de résultats:", rawData.results.length);
+                setResults(rawData.results);
+                
+                if (rawData.results.length > 0) {
+                    setScenario(rawData.results[0].scenario_term || 'Urgence');
+                    
+                    // Vérification finale des données affichées
+                    console.log("=== DONNÉES QUI SERONT AFFICHÉES ===");
+                    rawData.results.forEach((artisan, idx) => {
+                        const displayRating = artisan.yelp_rating || 'Non disponible';
+                        const displayReviews = artisan.review_count || 0;
+                        const displayScore = artisan.cas_score || 0;
+                        console.log(`Affichage ${idx}: ${artisan.name} | Rating: ${displayRating} | Avis: ${displayReviews} | CAS: ${displayScore}%`);
+                    });
+                }
+            } else {
+                throw new Error("Structure de réponse invalide: " + JSON.stringify(rawData));
+            }
 
         } catch (err) {
             console.error("💥 Erreur complète:", err);
-            setError(`Erreur: ${err.message}. Vérifiez la console (F12) pour plus de détails.`);
+            
+            // Message d'erreur plus explicite
+            if (err.message.includes('Failed to fetch') || err.message.includes('CORS')) {
+                setError(`Erreur CORS: Le backend ne permet pas les requêtes depuis Vercel. Vérifiez que CORS est bien configuré sur PythonAnywhere.`);
+            } else {
+                setError(`Erreur: ${err.message}`);
+            }
         } finally {
             setLoading(false);
         }
     };
+
+    // Fonction pour tester CORS séparément
+    const testCors = async () => {
+        try {
+            console.log("🧪 Test CORS séparé...");
+            const testResponse = await fetch('https://khalidou.pythonanywhere.com/', {
+                method: 'GET',
+            });
+            console.log("🧪 Test CORS statut:", testResponse.status);
+            console.log("🧪 Test CORS headers:", {
+                origin: testResponse.headers.get('Access-Control-Allow-Origin'),
+                methods: testResponse.headers.get('Access-Control-Allow-Methods')
+            });
+        } catch (err) {
+            console.error("🧪 Test CORS échoué:", err);
+        }
+    };
+
+    // Exécuter le test CORS au chargement
+    React.useEffect(() => {
+        testCors();
+    }, []);
 
     return (
         <div className="min-h-screen p-4 sm:p-8 bg-gray-50 font-sans">
             <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-6 md:p-10 border border-gray-100">
                 <header className="text-center mb-8">
                     <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
-                        🛠️ ArtisanTrust PROXY FIX - Moteur d'Adéquation Contextuelle
+                        🛠️ ArtisanTrust CORS FINAL - Moteur d'Adéquation Contextuelle
                     </h1>
                     <p className="text-lg text-gray-600">
                         Votre besoin, le bon artisan. Propulsé par l'IA et l'API Yelp.
@@ -253,7 +265,7 @@ function App() {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Recherche en cours...
+                                Test CORS en cours...
                             </>
                         ) : 'Trouver l\'Artisan Adapté'}
                     </button>
@@ -263,7 +275,7 @@ function App() {
                     <div className="mt-6 p-4 bg-red-100 text-red-700 border border-red-300 rounded-lg">
                         <strong>Erreur :</strong> {error}
                         <br />
-                        <small>Vérifiez la console (F12) pour plus de détails</small>
+                        <small>Vérifiez que CORS est bien configuré sur PythonAnywhere</small>
                     </div>
                 )}
                 
