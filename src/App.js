@@ -83,6 +83,7 @@ function App() {
 
         try {
             console.log("🔄 Envoi de la requête à:", API_URL);
+            console.log("📤 Données envoyées:", { description, category, location });
             
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -96,10 +97,31 @@ function App() {
                 }),
             });
 
-            // DEBUG CRITIQUE
+            // DEBUG CRITIQUE - ANALYSE COMPLÈTE
             console.log("📡 Statut de la réponse:", response.status);
             const rawData = await response.json();
-            console.log("🎯 Données brutes reçues:", rawData);
+            
+            // 🔍 NOUVEAU DEBUG DÉTAILLÉ
+            console.log("=== DONNÉES BRUTES API ===", rawData);
+            if (rawData.results && rawData.results.length > 0) {
+                console.log("=== ANALYSE DU PREMIER ARTISAN ===");
+                const firstArtisan = rawData.results[0];
+                console.log("Nom:", firstArtisan.name);
+                console.log("Rating Yelp:", firstArtisan.yelp_rating);
+                console.log("Nombre d'avis:", firstArtisan.review_count);
+                console.log("Score CAS:", firstArtisan.cas_score);
+                console.log("Preuves:", firstArtisan.proofs);
+                console.log("Scénario:", firstArtisan.scenario_term);
+                console.log("URL:", firstArtisan.url);
+                
+                // Vérification de tous les artisans
+                console.log("=== TOUS LES ARTISANS ===");
+                rawData.results.forEach((artisan, idx) => {
+                    console.log(`Artisan ${idx}: ${artisan.name} | Rating: ${artisan.yelp_rating} | Avis: ${artisan.review_count} | CAS: ${artisan.cas_score}%`);
+                });
+            } else {
+                console.warn("⚠️ Aucun résultat trouvé dans la réponse");
+            }
 
             if (!response.ok) {
                 throw new Error(`Erreur HTTP: ${response.status}. Détails: ${JSON.stringify(rawData)}`);
@@ -107,14 +129,19 @@ function App() {
 
             // VALIDATION DES DONNÉES
             if (rawData.status === 'success' && rawData.results) {
-                console.log("✅ Données valides reçues, premiers résultats:", rawData.results.slice(0, 2));
+                console.log("✅ Données valides reçues, nombre de résultats:", rawData.results.length);
                 setResults(rawData.results);
                 
                 if (rawData.results.length > 0) {
                     setScenario(rawData.results[0].scenario_term || 'Urgence');
-                    // Vérification des scores
+                    
+                    // Vérification finale des données affichées
+                    console.log("=== DONNÉES QUI SERONT AFFICHÉES ===");
                     rawData.results.forEach((artisan, idx) => {
-                        console.log(`Artisan ${idx}: ${artisan.name} - Score: ${artisan.cas_score}%`);
+                        const displayRating = artisan.yelp_rating || 'Non disponible';
+                        const displayReviews = artisan.review_count || 0;
+                        const displayScore = artisan.cas_score || 0;
+                        console.log(`Affichage ${idx}: ${artisan.name} | Rating: ${displayRating} | Avis: ${displayReviews} | CAS: ${displayScore}%`);
                     });
                 }
             } else {
@@ -123,7 +150,7 @@ function App() {
 
         } catch (err) {
             console.error("💥 Erreur complète:", err);
-            setError(`Erreur: ${err.message}`);
+            setError(`Erreur: ${err.message}. Vérifiez la console (F12) pour plus de détails.`);
         } finally {
             setLoading(false);
         }
