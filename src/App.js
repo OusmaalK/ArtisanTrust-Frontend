@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-// ✅ CORRECTION 1: URL de test plus stable
+// ✅ URL CORRECTE
 const API_URL = 'https://khalidou.pythonanywhere.com/test-match';
 
 const ResultTable = ({ results, scenario }) => {
@@ -85,13 +85,16 @@ function App() {
             console.log("🔄 Envoi de la requête à:", API_URL);
             console.log("📤 Données envoyées:", { description, category, location });
             
-            const response = await fetch(API_URL, {
+            // ✅ CORRECTION: Utilisation d'un proxy CORS pour contourner le problème
+            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+            const targetUrl = API_URL;
+            
+            const response = await fetch(proxyUrl + targetUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
                 },
-                // ✅ CORRECTION 2: Ajout du mode CORS
-                mode: 'cors',
                 body: JSON.stringify({
                     description: description,
                     category: category,
@@ -101,6 +104,11 @@ function App() {
 
             // DEBUG CRITIQUE - ANALYSE COMPLÈTE
             console.log("📡 Statut de la réponse:", response.status);
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+
             const rawData = await response.json();
             
             // 🔍 NOUVEAU DEBUG DÉTAILLÉ
@@ -123,10 +131,6 @@ function App() {
                 });
             } else {
                 console.warn("⚠️ Aucun résultat trouvé dans la réponse");
-            }
-
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}. Détails: ${JSON.stringify(rawData)}`);
             }
 
             // VALIDATION DES DONNÉES
@@ -164,7 +168,7 @@ function App() {
                 <header className="text-center mb-8">
                     {/* ✅ CHANGEMENT VISIBLE pour confirmer le déploiement */}
                     <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
-                        🛠️ ArtisanTrust DEBUG - Moteur d'Adéquation Contextuelle
+                        🛠️ ArtisanTrust CORS FIX - Moteur d'Adéquation Contextuelle
                     </h1>
                     <p className="text-lg text-gray-600">
                         Votre besoin, le bon artisan. Propulsé par l'IA et l'API Yelp.
