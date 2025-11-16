@@ -82,77 +82,96 @@ function App() {
         setScenario('');
 
         try {
-            console.log("🔄 Envoi de la requête à:", API_URL);
+            console.log("🔄 Envoi de la requête avec proxy CORS alternatif");
             console.log("📤 Données envoyées:", { description, category, location });
             
-            // ✅ CORRECTION: Utilisation d'un proxy CORS pour contourner le problème
-            const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-            const targetUrl = API_URL;
+            // ✅ SOLUTION 1: PROXY CORS ALTERNATIF
+            const proxyUrls = [
+                'https://api.allorigins.win/raw?url=',
+                'https://corsproxy.io/?',
+                'https://thingproxy.freeboard.io/fetch/',
+                'https://cors.bridged.cc/'
+            ];
             
-            const response = await fetch(proxyUrl + targetUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                body: JSON.stringify({
-                    description: description,
-                    category: category,
-                    location: location,
-                }),
-            });
-
-            // DEBUG CRITIQUE - ANALYSE COMPLÈTE
-            console.log("📡 Statut de la réponse:", response.status);
+            let lastError = null;
             
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
-
-            const rawData = await response.json();
-            
-            // 🔍 NOUVEAU DEBUG DÉTAILLÉ
-            console.log("=== DONNÉES BRUTES API ===", rawData);
-            if (rawData.results && rawData.results.length > 0) {
-                console.log("=== ANALYSE DU PREMIER ARTISAN ===");
-                const firstArtisan = rawData.results[0];
-                console.log("Nom:", firstArtisan.name);
-                console.log("Rating Yelp:", firstArtisan.yelp_rating);
-                console.log("Nombre d'avis:", firstArtisan.review_count);
-                console.log("Score CAS:", firstArtisan.cas_score);
-                console.log("Preuves:", firstArtisan.proofs);
-                console.log("Scénario:", firstArtisan.scenario_term);
-                console.log("URL:", firstArtisan.url);
-                
-                // Vérification de tous les artisans
-                console.log("=== TOUS LES ARTISANS ===");
-                rawData.results.forEach((artisan, idx) => {
-                    console.log(`Artisan ${idx}: ${artisan.name} | Rating: ${artisan.yelp_rating} | Avis: ${artisan.review_count} | CAS: ${artisan.cas_score}%`);
-                });
-            } else {
-                console.warn("⚠️ Aucun résultat trouvé dans la réponse");
-            }
-
-            // VALIDATION DES DONNÉES
-            if (rawData.status === 'success' && rawData.results) {
-                console.log("✅ Données valides reçues, nombre de résultats:", rawData.results.length);
-                setResults(rawData.results);
-                
-                if (rawData.results.length > 0) {
-                    setScenario(rawData.results[0].scenario_term || 'Urgence');
+            // Essayer chaque proxy jusqu'à ce qu'un fonctionne
+            for (const proxyUrl of proxyUrls) {
+                try {
+                    console.log(`🔧 Essai avec proxy: ${proxyUrl}`);
                     
-                    // Vérification finale des données affichées
-                    console.log("=== DONNÉES QUI SERONT AFFICHÉES ===");
-                    rawData.results.forEach((artisan, idx) => {
-                        const displayRating = artisan.yelp_rating || 'Non disponible';
-                        const displayReviews = artisan.review_count || 0;
-                        const displayScore = artisan.cas_score || 0;
-                        console.log(`Affichage ${idx}: ${artisan.name} | Rating: ${displayRating} | Avis: ${displayReviews} | CAS: ${displayScore}%`);
+                    const response = await fetch(proxyUrl + encodeURIComponent(API_URL), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            description: description,
+                            category: category,
+                            location: location,
+                        }),
                     });
+
+                    console.log("📡 Statut de la réponse:", response.status);
+                    
+                    if (response.ok) {
+                        const rawData = await response.json();
+                        console.log("✅ Proxy réussi:", proxyUrl);
+                        
+                        // 🔍 DEBUG DÉTAILLÉ
+                        console.log("=== DONNÉES BRUTES API ===", rawData);
+                        if (rawData.results && rawData.results.length > 0) {
+                            console.log("=== ANALYSE DU PREMIER ARTISAN ===");
+                            const firstArtisan = rawData.results[0];
+                            console.log("Nom:", firstArtisan.name);
+                            console.log("Rating Yelp:", firstArtisan.yelp_rating);
+                            console.log("Nombre d'avis:", firstArtisan.review_count);
+                            console.log("Score CAS:", firstArtisan.cas_score);
+                            console.log("Preuves:", firstArtisan.proofs);
+                            console.log("Scénario:", firstArtisan.scenario_term);
+                            
+                            // Vérification de tous les artisans
+                            console.log("=== TOUS LES ARTISANS ===");
+                            rawData.results.forEach((artisan, idx) => {
+                                console.log(`Artisan ${idx}: ${artisan.name} | Rating: ${artisan.yelp_rating} | Avis: ${artisan.review_count} | CAS: ${artisan.cas_score}%`);
+                            });
+                        }
+
+                        // VALIDATION DES DONNÉES
+                        if (rawData.status === 'success' && rawData.results) {
+                            console.log("✅ Données valides reçues, nombre de résultats:", rawData.results.length);
+                            setResults(rawData.results);
+                            
+                            if (rawData.results.length > 0) {
+                                setScenario(rawData.results[0].scenario_term || 'Urgence');
+                                
+                                // Vérification finale des données affichées
+                                console.log("=== DONNÉES QUI SERONT AFFICHÉES ===");
+                                rawData.results.forEach((artisan, idx) => {
+                                    const displayRating = artisan.yelp_rating || 'Non disponible';
+                                    const displayReviews = artisan.review_count || 0;
+                                    const displayScore = artisan.cas_score || 0;
+                                    console.log(`Affichage ${idx}: ${artisan.name} | Rating: ${displayRating} | Avis: ${displayReviews} | CAS: ${displayScore}%`);
+                                });
+                            }
+                            return; // ✅ Succès - sortir de la boucle
+                        } else {
+                            throw new Error("Structure de réponse invalide: " + JSON.stringify(rawData));
+                        }
+                    } else {
+                        lastError = new Error(`Erreur HTTP: ${response.status}`);
+                        console.warn(`❌ Proxy échoué: ${proxyUrl} - Status: ${response.status}`);
+                    }
+                } catch (err) {
+                    lastError = err;
+                    console.warn(`❌ Proxy échoué: ${proxyUrl} - Erreur: ${err.message}`);
+                    // Continuer avec le proxy suivant
                 }
-            } else {
-                throw new Error("Structure de réponse invalide: " + JSON.stringify(rawData));
             }
+            
+            // Si aucun proxy n'a fonctionné
+            throw lastError || new Error("Tous les proxies CORS ont échoué");
 
         } catch (err) {
             console.error("💥 Erreur complète:", err);
@@ -166,9 +185,8 @@ function App() {
         <div className="min-h-screen p-4 sm:p-8 bg-gray-50 font-sans">
             <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-6 md:p-10 border border-gray-100">
                 <header className="text-center mb-8">
-                    {/* ✅ CHANGEMENT VISIBLE pour confirmer le déploiement */}
                     <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
-                        🛠️ ArtisanTrust CORS FIX - Moteur d'Adéquation Contextuelle
+                        🛠️ ArtisanTrust PROXY FIX - Moteur d'Adéquation Contextuelle
                     </h1>
                     <p className="text-lg text-gray-600">
                         Votre besoin, le bon artisan. Propulsé par l'IA et l'API Yelp.
