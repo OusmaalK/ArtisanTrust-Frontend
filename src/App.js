@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-// URL du backend - ASSUREZ-VOUS QUE C'EST LE BON ENDPOINT
-const API_URL = 'https://khalidou.pythonanywhere.com/match';
+// ✅ CORRECTION 1: URL de test plus stable
+const API_URL = 'https://khalidou.pythonanywhere.com/test-match';
 
 const ResultTable = ({ results, scenario }) => {
     return (
@@ -90,6 +90,8 @@ function App() {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                // ✅ CORRECTION 2: Ajout du mode CORS
+                mode: 'cors',
                 body: JSON.stringify({
                     description: description,
                     category: category,
@@ -160,8 +162,9 @@ function App() {
         <div className="min-h-screen p-4 sm:p-8 bg-gray-50 font-sans">
             <div className="max-w-4xl mx-auto bg-white shadow-2xl rounded-2xl p-6 md:p-10 border border-gray-100">
                 <header className="text-center mb-8">
+                    {/* ✅ CHANGEMENT VISIBLE pour confirmer le déploiement */}
                     <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
-                        🛠️ ArtisanTrust - Moteur d'Adéquation Contextuelle
+                        🛠️ ArtisanTrust DEBUG - Moteur d'Adéquation Contextuelle
                     </h1>
                     <p className="text-lg text-gray-600">
                         Votre besoin, le bon artisan. Propulsé par l'IA et l'API Yelp.
